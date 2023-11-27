@@ -10,6 +10,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@sinclair/typebox": "^0.31.28",
     "jose": "^5.1.1",
     "jsonwebtoken": "^9.0.2"
   }

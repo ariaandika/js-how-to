@@ -7,4 +7,5 @@ some dependencies only needed for testing
 ## Index
 
 - jwt
+- rpc
 
