@@ -39,7 +39,17 @@ const { data, error } = await client.login.query({ username: '&inject=true', pas
   credentials: 'include'
 })
 
-console.log({data, error})
+
+if (error) {
+  switch (error.name) {
+    case 'nice':
+      throw 'oof'
+    default:
+      throw 'nain'
+  }
+}
+
+data.mong
 
 server.stop()
 

@@ -43,17 +43,27 @@ we create a path from that nested object.
 
 ## Error
 
-We still exploring convinient way to create typesafe error handling.
-
-currently possible error is hard coded as type, which can absolutely
-be improved.
+We still exploring convinient way to create a typesafe error handling.
 
 consideration:
 
-### Error Class
+- register error as class
+
+the class will implement `serialize` method that, if the class thrown,
+what value should be returned
+
+- generic custom error
+
+a custom error that the handling will always be just showing the message
+to the user
+
+- the unknown error
+
+an unexpected error that should have proper handling or at least transforming
+because it most likely contain sensitive information
 
 ```ts
-class DuplicateError implement RPCError {
+class DuplicateError implements RPCError {
     serialize() {
         return { name: 'DUPLICATE', message: 'Username is not available' }
     }
@@ -63,19 +73,34 @@ const proc = procedure()
     .error({
         duplicate: DuplicateError
     })
-
-    .query(() => {
+    .query(({ error }) => {
+        // generic custom error
+        throw error(404, 'Not Found')
+        // class error
         throw new DuplicateError()
     })
 
+```
 
+client side error handling
 
-// client
+```ts
+// client side error handling
+
 const { data, error } = await client.query()
 
-if (error && error.name == 'DUPLICATE') {
-    return { message: error.message }
+if (error) {
+  switch (error.name) {
+    case 'nice':
+      // gracefull handling
+      return { message: error.message }
+    default:
+      // wildcard handling
+      throw error
 }
+
+// data is typed as safe now
+data
 ```
 
 ## Note
