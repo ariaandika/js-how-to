@@ -103,15 +103,83 @@ if (error) {
 data
 ```
 
+## Extensions
+
+If we provide a typesafe data fetching, we should integrate with
+schema validation. But all schema validation have its own ecosystem
+that make it want to use them.
+
+So we like to provide extensions instead.
+
+Here we need to provide a way to extend the built in system, like
+the body parsing.
+
+Server data usually have:
+
+- main request
+- body
+- session management
+
+### Using Method chaining
+
+> Not Implemented
+
+```ts
+const proc = init<{app: boolean}>()
+    .store({
+        db: dbConnection
+    })
+    .extend('tbox', (dto, { data, x }) => {
+        if (v.Check(dto, data)) {
+            return x.input(data)
+        }
+    })
+
+const auth = proc
+    .tbox(t.Object({
+        username: t.String(),
+        password: t.String(),
+    }))
+    .mutate(e => {
+        // { username: string, password: string }
+        e.data
+    })
+```
+
+### Simple
+
+> Not Implemented
+
+```ts
+const proc = init<{app: boolean}>()
+    .createEvent(req => ({
+        db,
+        auth: jwt( adminSession ),
+        body: tbox( loginDto )
+    }))
+
+const auth = proc
+    .mutate(({ input, body, auth }) => {
+        const data = body(input)
+        const session = auth()
+    })
+```
+
+problem
+
+- no typesafe if body is parsed inside handler
+
 ## Note
 
 consideration
 
-- should we modify the Procedure instead of creating new Route,  
-  and just use typescript to map the object type  
-  ! we cant, because no path defined in the procedure
-- should we able to define route level middleware ?
+- should we able to define route level middleware ? yes
 - should we infer locals from middleware return type ?
+- should we create new instance instead when defining procedure ?
+
+todo
+
+- event locals currently hard coded as type
 
 pro
 
@@ -127,14 +195,12 @@ terms
 - data, is request body
 - state, is request time data, represented as locals in event
 
-todo
-
-- client currently harcoded to have query and mutate function
-- event locals currently hard coded as type
-
 maybe
 
-- should one route have multiple method ?
+- should one route have multiple method ? no, we must provide 2 input
+- should we modify the Procedure instead of creating new Route,  
+  and just use typescript to map the object type  
+  ! we cant, because no path defined in the procedure
 
 
 ```ts
