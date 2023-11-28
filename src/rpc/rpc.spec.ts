@@ -10,22 +10,14 @@ const proc = procedure<{app: boolean}>()
 const auth = {
   login: proc
     .input(e => (e as { username: string, password: string }))
-    .error<{ name: 'nice', message: 'nia' }>()
+    .use<{ mob: string }>(e => e.locals.mob = 'mob')
     .query(e => {
-      if (!e.locals) {
-        throw e.error({ name: 'nice', message: 'nia' })
-      }
-      return Promise.resolve({ mong: e.data.username })
-    })
+      return Promise.resolve({ mong: e.data.username + e.locals.mob })
+    }),
 }
 
 const router = initRouter(auth)
 
-const server = Bun.serve({
-  fetch(request, server) {
-    return router(request)
-  },
-})
 
 
 
@@ -42,16 +34,12 @@ const { data, error } = await client.login.query({ username: '&inject=true', pas
 
 if (error) {
   switch (error.name) {
-    case 'nice':
-      throw 'oof'
     default:
       throw 'nain'
   }
 }
 
 data.mong
-
-server.stop()
 
 
 

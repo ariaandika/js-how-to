@@ -3,9 +3,11 @@ import type { Route } from "./rpc.server"
 export function unwrap<T>(val: T | null): asserts val is T { if (val === null || val === undefined) throw val }
 
 export type Infer<T extends Record<string,any>> = {
-  [x in keyof T]: T[x] extends Route<any, infer Input, infer Output, infer Errors> ? {
-    query(data: Input, opt: Parameters<typeof fetch>[1]): Promise<{ data: Awaited<Output>, error: null, } | { data: null, error: Errors }>
-    mutate(data: Input, opt: Parameters<typeof fetch>[1]): Promise<{ data: Awaited<Output>, error: null, } | { data: null, error: Errors }>
+  [x in keyof T]: T[x] extends Route<any, infer Input, infer Output, infer Method, infer Errors> ? {
+    [x in Method]: (
+      data: Input,
+      opt: Parameters<typeof fetch>[1]
+    ) => Promise<{ data: Awaited<Output>, error: null, } | { data: null, error: Errors }>
   } : Infer<T[x]>
 }
 

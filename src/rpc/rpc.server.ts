@@ -4,22 +4,33 @@ export interface Procedure<Locals = void> {
   clone(): Procedure<Locals>
 }
 
-export interface Route<Locals,Input,Output = void,Errors extends { name: Readonly<string> } = { name: 'unknown', message: string }> {
+export interface Route<
+  Locals,
+  Input,
+  Output = void,
+  Method extends 'query' | 'mutate' = never,
+  Errors extends { name: Readonly<string> } = { name: 'unknown', message: string }
+> {
   query<Out>(handle: (c: {
     locals: Locals,
     data: Input,
     request: Request,
     error(error: Errors | Omit<Errors,'name'>, code?: number): Errors
-  }) => Out ): Route<Locals,Input,Out,Errors>
+  }) => Out ): Route<Locals,Input,Out,'query',Errors>
 
   mutation<Out>(handle: (c: {
     locals: Locals,
     data: Input,
     request: Request,
     error(error: Errors | Omit<Errors,'name'>, code?: number): Errors
-  }) => Out ): Route<Locals,Input,Out,Errors>
+  }) => Out ): Route<Locals,Input,Out,'mutate',Errors>
 
-  error<Err extends { name: Readonly<string> }>(): Route<Locals,Input,Output,Errors | Err>
+  use<LocalLocals extends Record<string,any>>(handle: (event: {
+    request: Request,
+    locals: Locals & LocalLocals
+  }) => any): Route<Locals&LocalLocals,Input,Output,Method,Errors>
+
+  error<Err extends { name: Readonly<string> }>(): Route<Locals,Input,Output,Method,Errors | Err>
   run(req: Request): Output
 }
 
@@ -46,6 +57,7 @@ function Route(middlewares: any[], validator: CallableFunction) {
     handle: void 0 as any,
     method: "GET",
     middlewares,
+    mdlen: middlewares.length,
     validator,
     query(handle: any) {
       this.handle = handle
@@ -57,11 +69,17 @@ function Route(middlewares: any[], validator: CallableFunction) {
       this.method = 'POST'
       return this
     },
-    async run(req: Request,u: URL) {
+    use(handle: any) {
+      this.middlewares.push(handle)
+      this.mdlen++
+      return this
+    },
+    async run(req: Request) {
       try {
+        const u = new URL(req.url)
         const event = { request: req, locals: {}, error(e:any){ return e } }
 
-        for (let i = 0, len = middlewares.length;i < len;i++) {
+        for (let i = 0;i < this.mdlen;i++) {
           await middlewares[i](event)
         }
 
@@ -101,7 +119,7 @@ export function initRouter(routes: Record<string,any>) {
     if (matchRoute.method !== req.method)
       return new Response('',{ status: 405 })
 
-    return await matchRoute.run(req,u)
+    return await matchRoute.run(req)
   }
 }
 
@@ -111,15 +129,17 @@ function compileRoute(routes: Record<string,any>) {
   return r
 }
 
-function compile(routes: Record<string,any>, route: string, out: Record<string,any>) {
-  Object.entries(routes).map(([k,v]) => {
+function compile(routes: unknown, route: string, out: Record<string,any>) {
+  if (routes && typeof routes === 'object') {
+    Object.entries(routes).map(([k,v]) => {
 
-    if ("_isRpcRouter" in v) {
-      out[`${route}/${k}`] = v
-      return 
-    }
+      if ("_isRpcRouter" in v) {
+        out[`${route}/${k}`] = v
+        return 
+      }
 
-    compile(routes, `${route}/${k}`, out)
-  })
+      compile(v, `${route}/${k}`, out)
+    })
+  }
 }
 
